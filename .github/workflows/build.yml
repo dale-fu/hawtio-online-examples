@@ -9,7 +9,6 @@ on:
   push:
     branches:
       - main
-      - multiarch-build
     paths-ignore:
       - '**.md'
 
@@ -22,6 +21,8 @@ jobs:
       matrix:
         java: ['17', '21']
     steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Set up Java
@@ -33,10 +34,10 @@ jobs:
       - name: Build
         run: |
           mvn --batch-mode --no-transfer-progress install \
-          -Dquarkus.jib.base-jvm-image=registry.access.redhat.com/ubi8/openjdk-${{matrix.java}}-runtime:latest \
-          -Dquarkus.jib.platforms=linux/amd64,linux/arm64,linux/ppc64le,linux/s390x \
-          -Dquarkus.container-image.push=false \
-          -Djkube.build.strategy=docker
+            -Dquarkus.jib.base-jvm-image=registry.access.redhat.com/ubi9/openjdk-${{ matrix.java }}-runtime:latest \
+            -Dquarkus.container-image.push=false \
+            -Djkube.generator.from=registry.access.redhat.com/ubi9/openjdk-${{ matrix.java }}:latest \
+            -Djkube.build.strategy=docker
       - name: Push image to Quay.io
         if: github.event_name == 'push'
         env:
@@ -45,17 +46,23 @@ jobs:
         run: |
           docker login --help
           docker login -u $USERNAME -p $PASSWORD quay.io
-          mvn --batch-mode --no-transfer-progress install \
-            -Dquarkus.jib.base-jvm-image=registry.access.redhat.com/ubi8/openjdk-${{matrix.java}}-runtime:latest \
+
+          mvn --batch-mode --no-transfer-progress -pl '!camel-quarkus-openshift' install \
+            -Dquarkus.jib.base-jvm-image=registry.access.redhat.com/ubi9/openjdk-${{ matrix.java }}-runtime:latest \
             -Dquarkus.jib.platforms=linux/amd64,linux/arm64,linux/ppc64le,linux/s390x \
+            -Dquarkus.container-image.name=hawtio-online-example-camel-quarkus \
             -Dquarkus.container-image.tag=${{ matrix.java }} \
             -Dquarkus.container-image.push=true \
+            -Djkube.generator.from=registry.access.redhat.com/ubi9/openjdk-${{ matrix.java }}:latest \
             -Djkube.build.strategy=docker
-          docker tag quay.io/hawtio/hawtio-online-example-camel-springboot:latest quay.io/hawtio/hawtio-online-example-camel-springboot:${{matrix.java}}
 
-          docker push quay.io/hawtio/hawtio-online-example-camel-springboot:${{matrix.java}}
+          docker buildx build -t quay.io/hawtio/hawtio-online-example-camel-springboot:${{ matrix.java }} \
+            --platform linux/amd64,linux/arm64,linux/ppc64le,linux/s390x \
+            --provenance=false \
+            --push \
+            camel-springboot/target/docker/quay.io/hawtio/hawtio-online-example-camel-springboot/latest/build/
 
-          if [[ "${{matrix.java}}" == "21" ]]; then
+          if [[ "${{ matrix.java }}" == "21" ]]; then
             docker buildx imagetools create -t quay.io/hawtio/hawtio-online-example-camel-quarkus:latest quay.io/hawtio/hawtio-online-example-camel-quarkus:${{ matrix.java }}
-            docker push quay.io/hawtio/hawtio-online-example-camel-springboot:latest
+            docker buildx imagetools create -t quay.io/hawtio/hawtio-online-example-camel-springboot:latest quay.io/hawtio/hawtio-online-example-camel-springboot:${{ matrix.java }}
           fi
