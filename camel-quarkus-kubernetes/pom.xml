@@ -44,7 +44,7 @@
       application uses.
     -->
     <quarkus.container-image.registry>quay.io</quarkus.container-image.registry>
-    <quarkus.container-image.group>hawtio</quarkus.container-image.group>
+    <quarkus.container-image.group>dafu</quarkus.container-image.group>
     <quarkus.container-image.tag>latest</quarkus.container-image.tag>
 
     <!-- Jolokia agent settings on the container -->

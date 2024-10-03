@@ -4,12 +4,13 @@ on:
   push:
     branches:
       - main
+      - multiarch
     paths-ignore:
       - '**.md'
 
 jobs:
   build:
-    if: github.repository_owner == 'hawtio'
+    if: github.repository_owner == 'dale-fu'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -44,13 +45,13 @@ jobs:
             -Djkube.generator.from=registry.access.redhat.com/ubi9/openjdk-${{ matrix.java }}:latest \
             -Djkube.build.strategy=docker
 
-          docker buildx build -t quay.io/hawtio/hawtio-online-example-camel-springboot:${{ matrix.java }} \
+          docker buildx build -t quay.io/dafu/hawtio-online-example-camel-springboot:${{ matrix.java }} \
             --platform linux/amd64,linux/arm64,linux/ppc64le,linux/s390x \
             --provenance=false \
             --push \
-            camel-springboot/target/docker/quay.io/hawtio/hawtio-online-example-camel-springboot/latest/build/
+            camel-springboot/target/docker/quay.io/dafu/hawtio-online-example-camel-springboot/latest/build/
 
           if [[ "${{ matrix.java }}" == "21" ]]; then
-            docker buildx imagetools create -t quay.io/hawtio/hawtio-online-example-camel-quarkus:latest quay.io/hawtio/hawtio-online-example-camel-quarkus:${{ matrix.java }}
-            docker buildx imagetools create -t quay.io/hawtio/hawtio-online-example-camel-springboot:latest quay.io/hawtio/hawtio-online-example-camel-springboot:${{ matrix.java }}
+            docker buildx imagetools create -t quay.io/dafu/hawtio-online-example-camel-quarkus:latest quay.io/dafu/hawtio-online-example-camel-quarkus:${{ matrix.java }}
+            docker buildx imagetools create -t quay.io/dafu/hawtio-online-example-camel-springboot:latest quay.io/dafu/hawtio-online-example-camel-springboot:${{ matrix.java }}
           fi
